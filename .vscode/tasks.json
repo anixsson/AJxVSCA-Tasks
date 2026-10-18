@@ -4,7 +4,19 @@
         {
             "label": "Package: Create VSIX",
             "type": "shell",
-            "command": "npm install --global @vscode/vsce && vsce package --allow-missing-repository"
+            "command": "npx --yes @vscode/vsce package"
+        },
+        {
+            "label": "Publish: Login",
+            "type": "shell",
+            "command": "npx --yes @vscode/vsce login ajxsystems",
+            "problemMatcher": []
+        },
+        {
+            "label": "Publish: Patch Update",
+            "type": "shell",
+            "command": "npx --yes @vscode/vsce publish patch",
+            "problemMatcher": []
         }
     ]
 }
