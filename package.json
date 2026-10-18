@@ -61,6 +61,11 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "taskAccordion.sort",
+        "title": "Sort Tasks",
+        "icon": "$(sort-precedence)"
+      },
+      {
         "command": "taskAccordion.openFile",
         "title": "Open tasks.json",
         "icon": "$(go-to-file)"
@@ -75,6 +80,11 @@
         },
         {
           "command": "taskAccordion.refresh",
+          "when": "view == taskAccordion.tasks",
+          "group": "navigation"
+        },
+        {
+          "command": "taskAccordion.sort",
           "when": "view == taskAccordion.tasks",
           "group": "navigation"
         }

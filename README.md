@@ -4,7 +4,7 @@ AJxVSCA Tasks is a Visual Studio Code extension that adds a sidebar for browsing
 
 ## Features
 
-- Lists workspace tasks and sorts them by name.
+- Lists workspace tasks and lets you sort them by name or by their order in the workspace task list.
 - Groups tasks whose labels use the `Group: Task` format. For example, `Build: Api` appears as `Api` under `Build`.
 - Shows tasks without a colon at the top level.
 - Shows each task's command in lighter secondary text next to its name and the full command on hover.
@@ -46,9 +46,10 @@ Only tasks scoped to a workspace are shown; user-level tasks are excluded.
    }
    ```
 
-3. Open the **Tasks** activity bar view. Use its **Open tasks.json** title bar button to open the workspace task file, or select a task's play button to run it in the VS Code task terminal. To run a whole group, select the group's play button and confirm; tasks run sequentially in alphabetical order by task name.
+3. Open the **Tasks** activity bar view. Use its **Open tasks.json** title bar button to open the workspace task file, or select a task's play button to run it in the VS Code task terminal. To run a whole group, select the group's play button and confirm; tasks run sequentially in the selected sort order.
+4. Use **Sort Tasks** in the view title bar to switch between **Name (A-Z)** and **File order**. The selection is remembered for each workspace. File order follows the order returned by VS Code for the workspace tasks; groups appear where their first task occurs, and tasks within each group keep their order.
 
-**Tip:** Prefix group and task names with zero-padded numbers to keep them in the intended flow. For example, use `1. Setup` and `2. Build` for group names, and `Build: 1. Restore` and `Build: 2. Compile` for tasks. Names are sorted alphabetically, so zero-padding keeps `10` after `9`.
+**Tip:** When sorting by name, prefix group and task names with zero-padded numbers to keep them in the intended flow. For example, use `1. Setup` and `2. Build` for group names, and `Build: 1. Restore` and `Build: 2. Compile` for tasks. Zero-padding keeps `10` after `9`.
 
 The example tasks use `dotnet` and `ls`; replace commands and arguments with ones available in your environment. VS Code must be version 1.80 or later.
 

@@ -1,13 +1,19 @@
 const vscode = require('vscode');
 
 class TaskProvider {
-  constructor() {
+  constructor(sortBy = 'name') {
     this._emitter = new vscode.EventEmitter();
     this.onDidChangeTreeData = this._emitter.event;
+    this.sortBy = sortBy;
   }
 
   refresh() {
     this._emitter.fire();
+  }
+
+  setSortBy(sortBy) {
+    this.sortBy = sortBy;
+    this.refresh();
   }
 
   getTreeItem(el) {
@@ -22,15 +28,18 @@ class TaskProvider {
     const tasks = (await vscode.tasks.fetchTasks()).filter(
       t => t.source === 'Workspace' && t.scope && typeof t.scope === 'object'
     );
-    tasks.sort((a, b) => a.name.localeCompare(b.name));
+    if (this.sortBy === 'name') tasks.sort((a, b) => a.name.localeCompare(b.name));
 
     // A label like "Build: Api" is shown as "Api" under a "Build" heading
     const groups = new Map();
     const loose = [];
+    const ordered = [];
     for (const task of tasks) {
       const m = /^([^:]+):\s*(.+)$/.exec(task.name);
       if (!m) {
-        loose.push(this._taskItem(task, task.name));
+        const item = this._taskItem(task, task.name);
+        loose.push(item);
+        ordered.push(item);
         continue;
       }
       const heading = m[1].trim();
@@ -41,9 +50,11 @@ class TaskProvider {
         g.tooltip = `Run all tasks in ${heading} in order`;
         g.children = [];
         groups.set(heading, g);
+        ordered.push(g);
       }
       groups.get(heading).children.push(this._taskItem(task, m[2].trim()));
     }
+    if (this.sortBy === 'file') return ordered;
     return [...[...groups.values()].sort((a, b) => a.label.localeCompare(b.label)), ...loose];
   }
 
@@ -117,6 +128,7 @@ const CHEATSHEET = [
     rows: [
       ['Green play button', 'Runs the task'],
       ['Group play button', 'Runs each task in the group in order'],
+      ['Sort Tasks button', 'Choose name or file order'],
       ['Refresh button', 'Reloads tasks.json'],
       ['Scope', 'Only this project\'s tasks.json']
     ]
@@ -177,7 +189,8 @@ class HelpProvider {
 }
 
 function activate(context) {
-  const provider = new TaskProvider();
+  const sortBy = context.workspaceState.get('sortBy', 'name');
+  const provider = new TaskProvider(sortBy);
   const view = vscode.window.createTreeView('taskAccordion.tasks', { treeDataProvider: provider });
   const helpView = vscode.window.createTreeView('taskAccordion.help', { treeDataProvider: new HelpProvider() });
   const watcher = vscode.workspace.createFileSystemWatcher('**/.vscode/tasks.json');
@@ -189,6 +202,18 @@ function activate(context) {
     view,
     helpView,
     watcher,
+    vscode.commands.registerCommand('taskAccordion.sort', async () => {
+      const selected = await vscode.window.showQuickPick(
+        [
+          { label: 'Name (A-Z)', value: 'name' },
+          { label: 'File order', value: 'file' }
+        ],
+        { placeHolder: `Sort tasks by (currently ${provider.sortBy === 'file' ? 'File order' : 'Name (A-Z)'})` }
+      );
+      if (!selected || selected.value === provider.sortBy) return;
+      provider.setSortBy(selected.value);
+      await context.workspaceState.update('sortBy', selected.value);
+    }),
     vscode.commands.registerCommand('taskAccordion.refresh', () => provider.refresh()),
     vscode.commands.registerCommand('taskAccordion.openFile', async () => {
       const folders = vscode.workspace.workspaceFolders;

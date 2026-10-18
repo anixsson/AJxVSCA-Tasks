@@ -2,6 +2,10 @@
 
 Notable changes to this project are documented here.
 
+## [Unreleased]
+
+- Added a **Sort Tasks** control to switch between alphabetical name order and workspace task order.
+
 ## [0.2.0] - 2026-10-19
 
 - Added an inline play button to run all tasks in a group in order, after confirmation.
