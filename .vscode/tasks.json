@@ -15,7 +15,7 @@
         {
             "label": "Publish: Patch Update",
             "type": "shell",
-            "command": "npx --yes @vscode/vsce publish patch",
+            "command": "vsce publish patch",
             "problemMatcher": []
         }
     ]
