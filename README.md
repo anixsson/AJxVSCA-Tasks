@@ -47,11 +47,26 @@ Only tasks scoped to a workspace are shown; user-level tasks are excluded.
    ```
 
 3. Open the **Tasks** activity bar view. Use its **Open tasks.json** title bar button to open the workspace task file, or select a task's play button to run it in the VS Code task terminal. To run a whole group, select the group's play button and confirm; tasks run sequentially in the selected sort order.
-4. Use **Sort Tasks** in the view title bar to switch between **Name (A-Z)** and **File order**. The selection is remembered for each workspace. File order follows the order returned by VS Code for the workspace tasks; groups appear where their first task occurs, and tasks within each group keep their order.
-
-**Tip:** When sorting by name, prefix group and task names with zero-padded numbers to keep them in the intended flow. For example, use `1. Setup` and `2. Build` for group names, and `Build: 1. Restore` and `Build: 2. Compile` for tasks. Zero-padding keeps `10` after `9`.
 
 The example tasks use `dotnet` and `ls`; replace commands and arguments with ones available in your environment. VS Code must be version 1.80 or later.
+
+## Sorting tasks
+
+By default, tasks are sorted by name. To change this, select the **Sort Tasks** button (sort icon) in the Tasks view title bar, next to **Refresh**, and pick an option:
+
+| Option | Result |
+| --- | --- |
+| **Name (A-Z)** (default) | Groups are sorted alphabetically, followed by ungrouped tasks. Tasks within each group are sorted by name. |
+| **File order** | Tasks and groups follow the order of the workspace task list, so you control the order by arranging tasks in `tasks.json`. A group appears where its first task occurs, and tasks within a group keep their order. |
+
+How it works:
+
+- The picker shows the current option in its placeholder text. The list updates as soon as you choose.
+- Your choice is remembered for each workspace, so it is restored the next time you open it.
+- Group play buttons run tasks in the order currently shown, so the sort option also controls the run order.
+- File order is the order in which VS Code returns the workspace tasks, which normally matches their order in `.vscode/tasks.json`.
+
+**Tip:** When sorting by name, prefix group and task names with zero-padded numbers to keep them in the intended flow. For example, use `1. Setup` and `2. Build` for group names, and `Build: 1. Restore` and `Build: 2. Compile` for tasks. Zero-padding keeps `10` after `9`.
 
 ## License
 
