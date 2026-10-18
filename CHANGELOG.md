@@ -2,6 +2,10 @@
 
 Notable changes to this project are documented here.
 
+## [0.3.5] - 2026-10-19
+
+- Updated the Tasks Activity Bar icon with a transparent background and theme-aware outline.
+
 ## [0.3.3] - 2026-10-19
 
 - Added the custom icon to the Tasks Activity Bar view and the extension package.
