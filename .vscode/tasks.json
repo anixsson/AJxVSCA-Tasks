@@ -4,12 +4,12 @@
         {
             "label": "Package: Create VSIX",
             "type": "shell",
-            "command": "npx --yes @vscode/vsce package"
+            "command": "vsce package"
         },
         {
             "label": "Publish: Login",
             "type": "shell",
-            "command": "npx --yes @vscode/vsce login ajxsystems",
+            "command": "vsce login ajxsystems",
             "problemMatcher": []
         },
         {
