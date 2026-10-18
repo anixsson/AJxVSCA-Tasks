@@ -1,0 +1,35 @@
+{
+  "name": "AJxVSCA-Tasks",
+  "displayName": "AJxVSCA Tasks",
+  "description": "Sidebar view listing and running tasks from .vscode/tasks.json",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": { "vscode": "^1.80.0" },
+  "main": "./extension.js",
+  "activationEvents": ["workspaceContains:.vscode/tasks.json"],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "taskAccordion", "title": "Tasks", "icon": "$(checklist)" }
+      ]
+    },
+    "views": {
+      "taskAccordion": [
+        { "id": "taskAccordion.tasks", "name": "tasks.json" },
+        { "id": "taskAccordion.help", "name": "How to use", "visibility": "collapsed" }
+      ]
+    },
+    "commands": [
+      { "command": "taskAccordion.run", "title": "Run Task", "icon": { "light": "media/run-green.svg", "dark": "media/run-green.svg" } },
+      { "command": "taskAccordion.refresh", "title": "Refresh Tasks", "icon": "$(refresh)" }
+    ],
+    "menus": {
+      "view/title": [
+        { "command": "taskAccordion.refresh", "when": "view == taskAccordion.tasks", "group": "navigation" }
+      ],
+      "view/item/context": [
+        { "command": "taskAccordion.run", "when": "view == taskAccordion.tasks && viewItem == task", "group": "inline" }
+      ]
+    }
+  }
+}

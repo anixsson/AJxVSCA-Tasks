@@ -1,0 +1,10 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Package: Create VSIX",
+            "type": "shell",
+            "command": "npm install --global @vscode/vsce && vsce package --allow-missing-repository"
+        }
+    ]
+}
