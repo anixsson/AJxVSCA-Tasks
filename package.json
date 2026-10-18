@@ -2,7 +2,7 @@
   "name": "AJxVSCA-Tasks",
   "displayName": "AJxVSCA Tasks",
   "description": "Sidebar view listing and running tasks from .vscode/tasks.json",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "publisher": "ajxsystems",
   "repository": {
     "type": "git",
@@ -48,6 +48,14 @@
         }
       },
       {
+        "command": "taskAccordion.runGroup",
+        "title": "Run Group",
+        "icon": {
+          "light": "media/run-group-green.svg",
+          "dark": "media/run-group-green.svg"
+        }
+      },
+      {
         "command": "taskAccordion.refresh",
         "title": "Refresh Tasks",
         "icon": "$(refresh)"
@@ -75,6 +83,11 @@
         {
           "command": "taskAccordion.run",
           "when": "view == taskAccordion.tasks && viewItem == task",
+          "group": "inline"
+        },
+        {
+          "command": "taskAccordion.runGroup",
+          "when": "view == taskAccordion.tasks && viewItem == group",
           "group": "inline"
         }
       ]

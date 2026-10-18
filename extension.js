@@ -38,6 +38,7 @@ class TaskProvider {
         const g = new vscode.TreeItem(heading, vscode.TreeItemCollapsibleState.Expanded);
         g.contextValue = 'group';
         g.iconPath = new vscode.ThemeIcon('folder');
+        g.tooltip = `Run all tasks in ${heading} in order`;
         g.children = [];
         groups.set(heading, g);
       }
@@ -106,6 +107,7 @@ const CHEATSHEET = [
     icon: 'extensions',
     rows: [
       ['"Build: Api"', 'Shown as Api under Build'],
+      ['Group play button', 'Runs all tasks in the group in order'],
       ['"Date"', 'No prefix = top level']
     ]
   },
@@ -114,11 +116,42 @@ const CHEATSHEET = [
     icon: 'extensions',
     rows: [
       ['Green play button', 'Runs the task'],
+      ['Group play button', 'Runs each task in the group in order'],
       ['Refresh button', 'Reloads tasks.json'],
       ['Scope', 'Only this project\'s tasks.json']
     ]
   }
 ];
+
+async function runTaskAndWait(task) {
+  let execution;
+  const endedExecutions = new Set();
+  const processExitCodes = new Map();
+  let resolveEnded;
+  const ended = new Promise(resolve => {
+    resolveEnded = resolve;
+  });
+  const endListener = vscode.tasks.onDidEndTask(event => {
+    endedExecutions.add(event.execution);
+    if (event.execution === execution) resolveEnded();
+  });
+  const processListener = vscode.tasks.onDidEndTaskProcess(event => {
+    processExitCodes.set(event.execution, event.exitCode);
+  });
+
+  try {
+    execution = await vscode.tasks.executeTask(task);
+    if (endedExecutions.has(execution)) resolveEnded();
+    await ended;
+    const exitCode = processExitCodes.get(execution);
+    if (exitCode !== undefined && exitCode !== 0) {
+      throw new Error(`Task "${task.name}" exited with code ${exitCode}.`);
+    }
+  } finally {
+    endListener.dispose();
+    processListener.dispose();
+  }
+}
 
 class HelpProvider {
   getTreeItem(el) {
@@ -171,6 +204,24 @@ function activate(context) {
       // Inline button passes the tree item, which carries the task
       const task = arg && arg.task;
       if (task) await vscode.tasks.executeTask(task);
+    }),
+    vscode.commands.registerCommand('taskAccordion.runGroup', async group => {
+      const tasks = group && group.children
+        ? group.children.map(child => child.task).filter(Boolean)
+        : [];
+      const confirmation = await vscode.window.showWarningMessage(
+        `Run all ${tasks.length} tasks in "${group.label}" in order?`,
+        { modal: true },
+        'Yes'
+      );
+      if (confirmation !== 'Yes') return;
+
+      try {
+        for (const task of tasks) await runTaskAndWait(task);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Could not run group "${group.label}": ${message}`);
+      }
     })
   );
 }
