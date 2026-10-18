@@ -142,6 +142,16 @@ function activate(context) {
     helpView,
     watcher,
     vscode.commands.registerCommand('taskAccordion.refresh', () => provider.refresh()),
+    vscode.commands.registerCommand('taskAccordion.openFile', async () => {
+      const folders = vscode.workspace.workspaceFolders;
+      if (!folders || !folders.length) return;
+      const uri = vscode.Uri.joinPath(folders[0].uri, '.vscode', 'tasks.json');
+      try {
+        await vscode.window.showTextDocument(uri);
+      } catch {
+        vscode.window.showWarningMessage('.vscode/tasks.json not found in this workspace.');
+      }
+    }),
     vscode.commands.registerCommand('taskAccordion.run', async arg => {
       // Inline button passes the tree item, which carries the task
       const task = arg && arg.task;

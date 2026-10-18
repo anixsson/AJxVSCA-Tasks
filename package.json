@@ -25,10 +25,12 @@
     },
     "commands": [
       { "command": "taskAccordion.run", "title": "Run Task", "icon": { "light": "media/run-green.svg", "dark": "media/run-green.svg" } },
-      { "command": "taskAccordion.refresh", "title": "Refresh Tasks", "icon": "$(refresh)" }
+      { "command": "taskAccordion.refresh", "title": "Refresh Tasks", "icon": "$(refresh)" },
+      { "command": "taskAccordion.openFile", "title": "Open tasks.json", "icon": "$(go-to-file)" }
     ],
     "menus": {
       "view/title": [
+        { "command": "taskAccordion.openFile", "when": "view == taskAccordion.tasks", "group": "navigation@0" },
         { "command": "taskAccordion.refresh", "when": "view == taskAccordion.tasks", "group": "navigation" }
       ],
       "view/item/context": [
