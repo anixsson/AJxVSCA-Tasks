@@ -4,6 +4,7 @@
   "description": "Sidebar view listing and running tasks from .vscode/tasks.json",
   "version": "0.3.2",
   "publisher": "ajxsystems",
+  "icon": "media/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/anixsson/AJxVSCA-Tasks.git"
@@ -21,7 +22,7 @@
         {
           "id": "taskAccordion",
           "title": "Tasks",
-          "icon": "$(checklist)"
+          "icon": "media/icon.svg"
         }
       ]
     },
