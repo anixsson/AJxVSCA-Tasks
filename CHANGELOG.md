@@ -2,6 +2,14 @@
 
 Notable changes to this project are documented here.
 
+## [0.3.3] - 2026-10-19
+
+- Added the custom icon to the Tasks Activity Bar view and the extension package.
+
+## [0.3.2] - 2026-10-19
+
+- Version bump only; no user-facing changes.
+
 ## [0.3.1] - 2026-10-19
 
 - Name sorting now compares numbers numerically, so numbered labels sort in the expected order (for example, `2` before `10`).
