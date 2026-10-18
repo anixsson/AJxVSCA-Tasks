@@ -7,6 +7,7 @@ AJxVSCA Tasks is a Visual Studio Code extension that adds a sidebar for browsing
 - Lists workspace tasks and sorts them by name.
 - Groups tasks whose labels use the `Group: Task` format. For example, `Build: Api` appears as `Api` under `Build`.
 - Shows tasks without a colon at the top level.
+- Shows each task's command in lighter secondary text next to its name and the full command on hover.
 - Runs a task from its inline play button.
 - Opens `.vscode/tasks.json` from the Tasks view title bar.
 - Refreshes the task list when `.vscode/tasks.json` is created, changed, or deleted, or when you select the refresh button.

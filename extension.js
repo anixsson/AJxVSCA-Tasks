@@ -50,10 +50,25 @@ class TaskProvider {
     const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
     item.contextValue = 'task';
     item.iconPath = new vscode.ThemeIcon('terminal');
-    item.tooltip = task.detail || task.name;
-    item.description = task.detail;
+    const command = this._taskCommand(task);
+    item.tooltip = command
+      ? [command, task.detail].filter(Boolean).join('\n')
+      : task.detail || task.name;
+    item.description = command || task.detail;
     item.task = task;
     return item;
+  }
+
+  _taskCommand(task) {
+    const execution = task.execution;
+    if (!execution) return '';
+    if (execution.commandLine) return execution.commandLine;
+
+    const command = execution.command || execution.process;
+    if (!command) return '';
+    const displayArg = arg => typeof arg === 'string' ? arg : arg.value;
+    const args = (execution.args || []).map(displayArg);
+    return [displayArg(command), ...args].join(' ');
   }
 }
 
