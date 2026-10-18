@@ -28,7 +28,7 @@ class TaskProvider {
     const tasks = (await vscode.tasks.fetchTasks()).filter(
       t => t.source === 'Workspace' && t.scope && typeof t.scope === 'object'
     );
-    if (this.sortBy === 'name') tasks.sort((a, b) => a.name.localeCompare(b.name));
+    if (this.sortBy === 'name') tasks.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 
     // A label like "Build: Api" is shown as "Api" under a "Build" heading
     const groups = new Map();
@@ -55,7 +55,7 @@ class TaskProvider {
       groups.get(heading).children.push(this._taskItem(task, m[2].trim()));
     }
     if (this.sortBy === 'file') return ordered;
-    return [...[...groups.values()].sort((a, b) => a.label.localeCompare(b.label)), ...loose];
+    return [...[...groups.values()].sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true })), ...loose];
   }
 
   _taskItem(task, label) {

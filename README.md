@@ -66,7 +66,7 @@ How it works:
 - Group play buttons run tasks in the order currently shown, so the sort option also controls the run order.
 - File order is the order in which VS Code returns the workspace tasks, which normally matches their order in `.vscode/tasks.json`.
 
-**Tip:** When sorting by name, prefix group and task names with zero-padded numbers to keep them in the intended flow. For example, use `1. Setup` and `2. Build` for group names, and `Build: 1. Restore` and `Build: 2. Compile` for tasks. Zero-padding keeps `10` after `9`.
+**Tip:** When sorting by name, numbers are sorted numerically, so `2` comes before `10`. Zero-padding is optional; use it only if you prefer labels such as `02. Build` and `10. Deploy` to have consistent-width numbering.
 
 ## License
 
