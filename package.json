@@ -2,7 +2,7 @@
   "name": "AJxVSCA-Tasks",
   "displayName": "AJxVSCA Tasks",
   "description": "Sidebar view listing and running tasks from .vscode/tasks.json",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "publisher": "ajxsystems",
   "repository": {
     "type": "git",
