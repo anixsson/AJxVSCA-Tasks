@@ -2,6 +2,10 @@
 
 Notable changes to this project are documented here.
 
+## [0.3.1] - 2026-10-19
+
+- Name sorting now compares numbers numerically, so numbered labels sort in the expected order (for example, `2` before `10`).
+
 ## [0.3.0] - 2026-10-19
 
 - Added a **Sort Tasks** button to the Tasks view title bar. It opens a picker with two options:
