@@ -2,6 +2,15 @@
 
 AJxVSCA Tasks is a Visual Studio Code extension that adds a sidebar for browsing and running tasks defined in your workspace's `.vscode/tasks.json`.
 
+Run a task with one click, or run every task in a group in sequence:
+
+<table>
+  <tr>
+    <td align="center"><strong>Run a task</strong><br><img src="media/printscreen/Screenshot2.png" alt="Run an individual task from the Tasks sidebar" width="348"></td>
+    <td align="center"><strong>Run a group</strong><br><img src="media/printscreen/Screenshot1.png" alt="Run all tasks in a group from the Tasks sidebar" width="348"></td>
+  </tr>
+</table>
+
 ## Features
 
 - Lists workspace tasks and lets you sort them by name or by their order in the workspace task list.
