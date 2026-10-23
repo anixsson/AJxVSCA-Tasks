@@ -19,7 +19,7 @@ Run a task with one click, or run every task in a group in sequence:
 - Shows each task's command in lighter secondary text next to its name and the full command on hover.
 - Runs a task from its inline play button.
 - Runs all tasks in a group, in order, from the group's inline play button after confirmation.
-- Opens `.vscode/tasks.json` from the Tasks view title bar.
+- Opens `.vscode/tasks.json` from the Tasks view title bar, prompting to create it if it does not exist.
 - Refreshes the task list when `.vscode/tasks.json` is created, changed, or deleted, or when you select the refresh button.
 - Includes a collapsed **How to use** view with a brief `tasks.json` reference.
 

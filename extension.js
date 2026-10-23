@@ -218,11 +218,43 @@ function activate(context) {
     vscode.commands.registerCommand('taskAccordion.openFile', async () => {
       const folders = vscode.workspace.workspaceFolders;
       if (!folders || !folders.length) return;
+      const configDirectory = vscode.Uri.joinPath(folders[0].uri, '.vscode');
       const uri = vscode.Uri.joinPath(folders[0].uri, '.vscode', 'tasks.json');
+
+      try {
+        await vscode.workspace.fs.stat(uri);
+      } catch (error) {
+        if (error.code !== 'FileNotFound') {
+          const message = error instanceof Error ? error.message : String(error);
+          vscode.window.showErrorMessage(`Could not access .vscode/tasks.json: ${message}`);
+          return;
+        }
+
+        const create = await vscode.window.showWarningMessage(
+          '.vscode/tasks.json does not exist. Would you like to create it?',
+          { modal: true },
+          'Create'
+        );
+        if (create !== 'Create') return;
+
+        try {
+          await vscode.workspace.fs.createDirectory(configDirectory);
+          await vscode.workspace.fs.writeFile(
+            uri,
+            Buffer.from('{\n  "version": "2.0.0",\n  "tasks": []\n}\n')
+          );
+        } catch (createError) {
+          const message = createError instanceof Error ? createError.message : String(createError);
+          vscode.window.showErrorMessage(`Could not create .vscode/tasks.json: ${message}`);
+          return;
+        }
+      }
+
       try {
         await vscode.window.showTextDocument(uri);
-      } catch {
-        vscode.window.showWarningMessage('.vscode/tasks.json not found in this workspace.');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Could not open .vscode/tasks.json: ${message}`);
       }
     }),
     vscode.commands.registerCommand('taskAccordion.run', async arg => {
