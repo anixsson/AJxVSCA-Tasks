@@ -10,6 +10,50 @@ function commandValue(value) {
       && ['escape', 'strong', 'weak'].includes(value.quoting));
 }
 
+function validateSettings(settings, name) {
+  if (!isObject(settings)) throw new Error(`${name} must be an object.`);
+  for (const key of ['detail', 'type', 'dependsOrder']) {
+    if (settings[key] !== undefined && typeof settings[key] !== 'string') {
+      throw new Error(`${name}: ${key} must be a string.`);
+    }
+  }
+  if (settings.isBackground !== undefined && typeof settings.isBackground !== 'boolean') {
+    throw new Error(`${name}: isBackground must be a boolean.`);
+  }
+  if (settings.options !== undefined && !isObject(settings.options)) {
+    throw new Error(`${name}: options must be an object.`);
+  }
+  if (settings.presentation !== undefined) {
+    const presentation = settings.presentation;
+    if (!isObject(presentation)) throw new Error(`${name}: presentation must be an object.`);
+    for (const key of ['echo', 'focus', 'showReuseMessage', 'clear', 'close']) {
+      if (presentation[key] !== undefined && typeof presentation[key] !== 'boolean') {
+        throw new Error(`${name}: presentation.${key} must be a boolean.`);
+      }
+    }
+    for (const [key, values] of [
+      ['reveal', ['always', 'silent', 'never']],
+      ['panel', ['shared', 'dedicated', 'new']]
+    ]) {
+      if (presentation[key] !== undefined && !values.includes(presentation[key])) {
+        throw new Error(`${name}: unsupported presentation.${key} value.`);
+      }
+    }
+  }
+  if (settings.runOptions !== undefined) {
+    const options = settings.runOptions;
+    if (!isObject(options)) throw new Error(`${name}: runOptions must be an object.`);
+    if (options.reevaluateOnRerun !== undefined && typeof options.reevaluateOnRerun !== 'boolean') {
+      throw new Error(`${name}: runOptions.reevaluateOnRerun must be a boolean.`);
+    }
+  }
+  if (settings.group !== undefined && typeof settings.group !== 'string'
+    && (!isObject(settings.group) || typeof settings.group.kind !== 'string'
+      || (settings.group.isDefault !== undefined && typeof settings.group.isDefault !== 'boolean'))) {
+    throw new Error(`${name}: group must be a string or an object with kind and optional boolean isDefault.`);
+  }
+}
+
 async function readSharedTasks(vscode, uri) {
   const errors = [];
   const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
@@ -22,6 +66,10 @@ async function readSharedTasks(vscode, uri) {
   }
   if (config.inputs !== undefined) {
     throw new Error('Shared task files do not support inputs. Use environment or workspace variables instead.');
+  }
+  validateSettings(config, 'Task file');
+  for (const platform of ['windows', 'osx', 'linux']) {
+    if (config[platform] !== undefined) validateSettings(config[platform], `Task file ${platform} settings`);
   }
 
   const platform = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'osx' : 'linux';
@@ -37,6 +85,10 @@ async function readSharedTasks(vscode, uri) {
 
   for (const raw of config.tasks) {
     if (!isObject(raw)) throw new Error('Each task must be an object.');
+    validateSettings(raw, `Task "${raw.label}"`);
+    for (const platform of ['windows', 'osx', 'linux']) {
+      if (raw[platform] !== undefined) validateSettings(raw[platform], `Task "${raw.label}" ${platform} settings`);
+    }
     const entry = { ...defaults, ...raw, ...raw[platform] };
     const label = raw.label;
     if (typeof label !== 'string' || !label.trim() || tasksByName.has(label)) {

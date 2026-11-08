@@ -29,22 +29,26 @@ By default, only tasks scoped to a workspace are shown; user-level tasks are exc
 ## Shared command libraries
 
 The sidebar has separate **Task Libraries** and **Commands** panels. Select **Load Shared tasks.json**
-(folder icon) in the Task Libraries title bar and choose a task file.
+(folder icon) in the Task Libraries title bar and choose one or more task files.
+Each file is validated before it is added. Unreadable, malformed, or unsupported task files are skipped
+with an error showing the file path and reason. Valid files are saved together; the first valid file in
+the selection becomes active. If none are valid, the current source and saved list stay unchanged.
+Files are never executed during validation. Select another saved file to switch lists; files are not merged.
 The shared file replaces the workspace task list; it is not copied into your project or modified.
 Each successfully loaded file is saved once per workspace in **Task Libraries**.
-Click a file to show its tasks in **Commands** without reopening the file picker. Entries show the filename
-and up to three parent folders, with the full path on hover. The active file has a blue check icon and an
-**Active** marker; native tree labels use VS Code's normal text color. Saved files stay available after
+Click a file to show its tasks in **Commands** without reopening the file picker.
+Selecting a shared file or **Workspace tasks** automatically opens and focuses **Commands**, while
+**Task Libraries** remains visible.
+Entries show the filename and up to three parent folders, with the full path on hover. The active file has a blue check icon;
+native tree labels use VS Code's normal text color. Saved files stay available after
 returning to workspace tasks and after reopening VS Code. Missing or invalid selections report an error
 and leave the current task source unchanged. **Open tasks.json** opens the active file for editing.
 Use a saved file's **x** button to remove it from the library list without deleting the file on disk.
 Removing the active file returns to workspace tasks. You can add a removed file again with the file picker.
-**Task Libraries** has **Load Shared tasks.json** / **Use Workspace Tasks** buttons.
-**Commands** has **Open tasks.json** / **Refresh Tasks** / **Sort Tasks** buttons and indicates whether
-the active source is a shared library or workspace tasks.
-Load and Home icons turn blue while a shared library is active and return to normal in workspace mode.
-Select the **Workspace tasks** row at the top of **Task Libraries** to switch back to the project,
-or use the **Use Workspace Tasks** (home icon) shortcut.
+**Task Libraries** has a **Load Shared tasks.json** button that keeps its normal color in all modes.
+**Commands** has **Open tasks.json** / **Refresh Tasks** / **Sort Tasks** buttons and shows the active
+task filename beside its title (`tasks.json` for workspace tasks).
+Select the **Workspace tasks** row at the top of **Task Libraries** to switch back to the project.
 **Open tasks.json** opens the active file, and **Refresh Tasks** reloads it.
 Changes, deletion, and recreation of the shared file also refresh the list automatically.
 A missing or invalid shared file shows an error instead of silently falling back to workspace tasks.

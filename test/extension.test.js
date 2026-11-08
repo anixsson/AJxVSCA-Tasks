@@ -48,6 +48,8 @@ function createExtension(saved = {}) {
   const state = new Map(Object.entries(saved));
   const opened = [];
   const executed = [];
+  const focusedViews = [];
+  const dialogs = [];
   const ended = new EventEmitter();
   const processEnded = new EventEmitter();
   let selection;
@@ -116,7 +118,10 @@ function createExtension(saved = {}) {
         views.set(id, view);
         return view;
       },
-      showOpenDialog: async () => selection,
+      showOpenDialog: async options => {
+        dialogs.push(options);
+        return selection;
+      },
       showErrorMessage: message => errors.push(message),
       showTextDocument: async uri => opened.push(uri.toString()),
       showWarningMessage: async () => 'Yes'
@@ -128,6 +133,11 @@ function createExtension(saved = {}) {
       },
       executeCommand: async (name, key, value) => {
         if (commands.has(name)) return commands.get(name)(key);
+        if (name === 'taskAccordion.tasks.focus') {
+          focusedViews.push(name);
+          views.get('taskAccordion.tasks').visible = true;
+          return;
+        }
         assert.equal(name, 'setContext');
         contexts.set(key, value);
       }
@@ -150,7 +160,7 @@ function createExtension(saved = {}) {
   });
   module.exports.activate(context);
   return {
-    files, commands, watchers, errors, contexts, state, opened, executed, context,
+    files, commands, watchers, errors, contexts, state, opened, executed, context, focusedViews, dialogs,
     provider: views.get('taskAccordion.tasks').treeDataProvider,
     libraries: views.get('taskAccordion.libraries').treeDataProvider,
     view: views.get('taskAccordion.tasks'),
@@ -179,10 +189,10 @@ test('picker switches sources, remembers the file, opens it, watches changes, an
   const [workspace, source] = ext.libraries.getChildren();
   assert.equal(workspace.label, 'Workspace tasks');
   assert.equal(workspace.description, undefined);
-  assert.equal(ext.view.description, 'Shared library');
+  assert.equal(ext.view.description, 'tasks.json');
   assert.equal(source.contextValue, 'sharedSource');
   assert.equal(source.label, 'tasks.json');
-  assert.equal(source.description, 'Active - shared');
+  assert.equal(source.description, 'shared');
   assert.equal(source.iconPath.color.id, 'taskAccordion.sharedForeground');
   assert.match(source.tooltip, /\/shared\/tasks.json/);
   assert.equal(source.command.command, 'taskAccordion.selectSharedFile');
@@ -209,8 +219,8 @@ test('picker switches sources, remembers the file, opens it, watches changes, an
   assert.equal(ext.view.message, undefined);
   assert.equal((await ext.provider.getChildren())[0].label, 'Local');
   assert.equal(ext.libraries.getChildren()[1].description, 'shared');
-  assert.equal(ext.libraries.getChildren()[0].description, 'Active');
-  assert.equal(ext.view.description, 'Workspace tasks');
+  assert.equal(ext.libraries.getChildren()[0].description, undefined);
+  assert.equal(ext.view.description, 'tasks.json');
   assert.deepEqual(ext.errors, []);
 });
 
@@ -290,7 +300,7 @@ test('source paths show the filename and last three folders, including spaces an
     ext.files.set(value, shared([]));
     const [, source] = ext.libraries.getChildren();
     assert.equal(source.label, 'tasks.json');
-    assert.equal(source.description, ['Active', expected].filter(Boolean).join(' - '));
+    assert.equal(source.description, expected);
     assert.ok(source.tooltip.includes(ext.parseUri(value).fsPath));
     await ext.commands.get(source.command.command)(...source.command.arguments);
     assert.equal(ext.provider.sourceUri.toString(), value);
@@ -306,17 +316,18 @@ test('source paths show the filename and last three folders, including spaces an
   ext.provider.sharedSources = [ext.provider.sourceUri];
   const [, source] = ext.libraries.getChildren();
   assert.equal(source.label, 'tasks.json');
-  assert.equal(source.description, 'Active - .../Users/example/shared');
+  assert.equal(source.description, '.../Users/example/shared');
 });
 
-test('blue toolbar commands delegate to the existing source-switch commands', async () => {
+test('workspace row returns to the project and keeps the shared active indicator blue', async () => {
   const ext = createExtension();
   ext.files.set(ext.uri.toString(), shared([]));
   ext.select([ext.uri]);
-  await ext.commands.get('taskAccordion.loadFile.shared')();
+  await ext.commands.get('taskAccordion.loadFile')();
   assert.equal(ext.state.get('sharedTasksUri'), ext.uri.toString());
   assert.equal(ext.contexts.get('taskAccordion.sharedLibrary'), true);
-  await ext.commands.get('taskAccordion.useWorkspace.shared')();
+  assert.equal(ext.libraries.getChildren()[1].iconPath.color.id, 'taskAccordion.sharedForeground');
+  await ext.commands.get(ext.libraries.getChildren()[0].command.command)();
   assert.equal(ext.provider.sourceUri, undefined);
   assert.equal(ext.contexts.get('taskAccordion.sharedLibrary'), false);
 });
@@ -337,7 +348,8 @@ test('remembers every loaded library once and switches by clicking saved rows', 
   assert.equal(libraries.length, 2);
   assert.equal(libraries[0].description, 'shared');
   assert.equal(libraries[0].iconPath.color, undefined);
-  assert.equal(libraries[1].description, 'Active - other');
+  assert.equal(libraries[1].description, 'other');
+  assert.equal(libraries[1].iconPath.color.id, 'taskAccordion.sharedForeground');
   const previousWatcher = ext.watchers.at(-1);
   const first = libraries[0];
   await ext.commands.get(first.command.command)(...first.command.arguments);
@@ -346,7 +358,8 @@ test('remembers every loaded library once and switches by clicking saved rows', 
   [task] = await ext.provider.getChildren();
   libraries = ext.libraries.getChildren().slice(1);
   assert.equal(task.label, 'First');
-  assert.equal(libraries[0].description, 'Active - shared');
+  assert.equal(libraries[0].description, 'shared');
+  assert.equal(libraries[0].iconPath.color.id, 'taskAccordion.sharedForeground');
   assert.equal(libraries[1].description, 'other');
   await ext.commands.get(ext.libraries.getChildren()[0].command.command)();
   [task] = await ext.provider.getChildren();
@@ -395,7 +408,7 @@ test('missing or invalid saved selections preserve the current source, history a
   assert.equal(ext.errors.length, 2);
 });
 
-test('toolbar separates source actions from standard actions and uses conditional blue icons', () => {
+test('toolbar keeps Load neutral with no Home button in either source mode', () => {
   const manifest = require('../package.json');
   const menus = manifest.contributes.menus['view/title'];
   for (const sharedMode of [false, true]) {
@@ -403,26 +416,20 @@ test('toolbar separates source actions from standard actions and uses conditiona
       item.when.includes('!taskAccordion.sharedLibrary') ? !sharedMode
         : item.when.includes('&& taskAccordion.sharedLibrary') ? sharedMode : true
     ).sort((a, b) => a.group.localeCompare(b.group));
-    const suffix = sharedMode ? '.shared' : '';
     assert.deepEqual(visible.map(item => item.command), [
-      `taskAccordion.loadFile${suffix}`,
-      `taskAccordion.useWorkspace${suffix}`,
+      'taskAccordion.loadFile',
       'taskAccordion.openFile',
       'taskAccordion.refresh',
       'taskAccordion.sort'
     ]);
-    assert.ok(visible.slice(0, 2).every(item => item.when.startsWith('view == taskAccordion.libraries')));
-    assert.ok(visible.slice(2).every(item => item.when === 'view == taskAccordion.tasks'));
+    assert.equal(visible[0].when, 'view == taskAccordion.libraries');
+    assert.ok(visible.slice(1).every(item => item.when === 'view == taskAccordion.tasks'));
     for (const item of visible) {
       const command = manifest.contributes.commands.find(command => command.command === item.command);
       assert.ok(command);
-      if (item.command.endsWith('.shared')) {
-        for (const theme of ['light', 'dark']) {
-          const svg = fs.readFileSync(path.join(__dirname, '..', command.icon[theme]), 'utf8');
-          assert.match(svg, theme === 'light' ? /#007acc/ : /#3794ff/);
-        }
-      }
     }
+    assert.equal(manifest.contributes.commands.find(command => command.command === 'taskAccordion.loadFile').icon, '$(folder-opened)');
+    assert.ok(!manifest.contributes.commands.some(command => command.command.endsWith('.shared')));
   }
   assert.deepEqual(manifest.contributes.views.taskAccordion.slice(0, 2).map(view => view.name), ['Task Libraries', 'Commands']);
 });
@@ -503,8 +510,115 @@ test('libraries and commands remain separate and both refresh when the source ch
   assert.deepEqual(Array.from(await ext.provider.getChildren(), item => item.contextValue), ['task']);
   const workspace = ext.libraries.getChildren()[0];
   await ext.commands.get(workspace.command.command)();
-  assert.equal(ext.libraries.getChildren()[0].description, 'Active');
+  assert.equal(ext.libraries.getChildren()[0].description, undefined);
   assert.deepEqual(Array.from(await ext.provider.getChildren(), item => item.label), ['Local']);
   assert.ok(libraryRefreshes >= 2);
   assert.equal(libraryRefreshes, commandRefreshes);
+});
+
+test('Commands header shows the selected filename and library descriptions omit Active text', async () => {
+  const ext = createExtension();
+  const uri = ext.parseUri('file:///shared/My%20Commands.json');
+  ext.files.set(uri.toString(), shared([]));
+  ext.select([uri]);
+  await ext.commands.get('taskAccordion.loadFile')();
+  assert.equal(ext.view.description, 'My Commands.json');
+  const [, source] = ext.libraries.getChildren();
+  assert.equal(source.description, 'shared');
+  assert.equal(source.iconPath.id, 'check');
+  assert.equal(source.iconPath.color.id, 'taskAccordion.sharedForeground');
+  await ext.commands.get('taskAccordion.useWorkspace')();
+  assert.equal(ext.view.description, 'tasks.json');
+  assert.equal(ext.libraries.getChildren()[0].description, undefined);
+});
+
+test('selecting a shared or workspace list opens Commands without stealing focus on startup or refresh', async () => {
+  const ext = createExtension();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(ext.focusedViews.length, 0);
+  ext.view.visible = false;
+  ext.files.set(ext.uri.toString(), shared([]));
+  ext.select([ext.uri]);
+  await ext.commands.get('taskAccordion.loadFile')();
+  assert.equal(ext.view.visible, true);
+  assert.equal(ext.focusedViews.length, 1);
+  ext.provider.refresh();
+  ext.watchers.at(-1).fire();
+  assert.equal(ext.focusedViews.length, 1);
+  ext.view.visible = false;
+  const workspace = ext.libraries.getChildren()[0];
+  await ext.commands.get(workspace.command.command)();
+  assert.equal(ext.view.visible, true);
+  assert.equal(ext.focusedViews.length, 2);
+  ext.view.visible = false;
+  const source = ext.libraries.getChildren()[1];
+  await ext.commands.get(source.command.command)(...source.command.arguments);
+  assert.equal(ext.view.visible, true);
+  assert.equal(ext.focusedViews.length, 3);
+  ext.files.delete(ext.uri.toString());
+  await ext.commands.get(source.command.command)(...source.command.arguments);
+  assert.equal(ext.focusedViews.length, 3);
+});
+
+test('multi-file picker validates every file, skips corrupt files and selects the first valid file', async () => {
+  const ext = createExtension();
+  const corrupt = ext.parseUri('file:///bad/tasks.json');
+  const missing = ext.parseUri('file:///missing/tasks.json');
+  const other = ext.parseUri('file:///other/tasks.json');
+  ext.files.set(corrupt.toString(), '{broken');
+  ext.files.set(ext.uri.toString(), shared([{ label: 'First', type: 'shell', command: 'echo first' }]));
+  ext.files.set(other.toString(), shared([{ label: 'Second', type: 'shell', command: 'echo second' }]));
+  ext.select([corrupt, ext.uri, missing, other, ext.uri]);
+  await ext.commands.get('taskAccordion.loadFile')();
+  assert.equal(ext.dialogs[0].canSelectMany, true);
+  assert.deepEqual(Array.from(ext.state.get('sharedTasksHistory')), [ext.uri.toString(), other.toString()]);
+  assert.equal(ext.state.get('sharedTasksUri'), ext.uri.toString());
+  assert.equal((await ext.provider.getChildren())[0].label, 'First');
+  assert.equal(ext.focusedViews.length, 1);
+  assert.equal(ext.watchers.length, 2);
+  assert.equal(ext.errors.length, 2);
+  assert.ok(ext.errors.some(message => message.includes('/bad/tasks.json') && message.includes('Invalid JSON')));
+  assert.ok(ext.errors.some(message => message.includes('/missing/tasks.json') && message.includes('File not found')));
+  assert.deepEqual(ext.executed, []);
+  const otherRow = ext.libraries.getChildren()[2];
+  await ext.commands.get(otherRow.command.command)(...otherRow.command.arguments);
+  assert.equal((await ext.provider.getChildren())[0].label, 'Second');
+});
+
+test('rejects an entirely invalid batch without changing the previous source or saved library', async () => {
+  const ext = createExtension();
+  ext.files.set(ext.uri.toString(), shared([]));
+  ext.select([ext.uri]);
+  await ext.commands.get('taskAccordion.loadFile')();
+  const before = JSON.stringify(Object.fromEntries(ext.state));
+  const watcher = ext.watchers.at(-1);
+  const bad = ext.parseUri('file:///bad/tasks.json');
+  const malformedTask = ext.parseUri('file:///malformed/tasks.json');
+  ext.files.set(bad.toString(), '{');
+  ext.files.set(malformedTask.toString(), shared([
+    { label: 'Valid', type: 'shell', command: 'echo valid' },
+    { label: 'Invalid', type: 'shell', command: 'echo invalid', isBackground: 'yes' }
+  ]));
+  ext.select([bad, malformedTask]);
+  await ext.commands.get('taskAccordion.loadFile')();
+  assert.equal(JSON.stringify(Object.fromEntries(ext.state)), before);
+  assert.equal(ext.provider.sourceUri.toString(), ext.uri.toString());
+  assert.equal(ext.watchers.at(-1), watcher);
+  assert.equal(watcher.disposed, undefined);
+  assert.equal(ext.focusedViews.length, 1);
+  assert.equal(ext.errors.length, 2);
+  assert.ok(ext.errors.some(message => message.includes('/malformed/tasks.json') && message.includes('isBackground')));
+  assert.deepEqual(ext.executed, []);
+});
+
+test('the workspace task file can be validated and loaded without executing its commands', async () => {
+  const ext = createExtension();
+  const uri = ext.parseUri('file:///workspace/.vscode/tasks.json');
+  ext.files.set(uri.toString(), fs.readFileSync(path.join(__dirname, '../.vscode/tasks.json'), 'utf8'));
+  ext.select([uri]);
+  await ext.commands.get('taskAccordion.loadFile')();
+  assert.equal(ext.provider.sourceUri.toString(), uri.toString());
+  assert.equal((await ext.provider.getChildren()).length, 2);
+  assert.deepEqual(ext.errors, []);
+  assert.deepEqual(ext.executed, []);
 });

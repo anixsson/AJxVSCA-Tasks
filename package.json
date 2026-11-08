@@ -120,22 +120,6 @@
         "icon": "$(home)"
       },
       {
-        "command": "taskAccordion.loadFile.shared",
-        "title": "Load Shared tasks.json",
-        "icon": {
-          "light": "media/load-blue-light.svg",
-          "dark": "media/load-blue-dark.svg"
-        }
-      },
-      {
-        "command": "taskAccordion.useWorkspace.shared",
-        "title": "Use Workspace Tasks",
-        "icon": {
-          "light": "media/home-blue-light.svg",
-          "dark": "media/home-blue-dark.svg"
-        }
-      },
-      {
         "command": "taskAccordion.removeSharedFile",
         "title": "Remove Shared File from Library",
         "icon": "$(close)"
@@ -145,23 +129,8 @@
       "view/title": [
         {
           "command": "taskAccordion.loadFile",
-          "when": "view == taskAccordion.libraries && !taskAccordion.sharedLibrary",
+          "when": "view == taskAccordion.libraries",
           "group": "navigation@0"
-        },
-        {
-          "command": "taskAccordion.useWorkspace",
-          "when": "view == taskAccordion.libraries && !taskAccordion.sharedLibrary",
-          "group": "navigation@1"
-        },
-        {
-          "command": "taskAccordion.loadFile.shared",
-          "when": "view == taskAccordion.libraries && taskAccordion.sharedLibrary",
-          "group": "navigation@0"
-        },
-        {
-          "command": "taskAccordion.useWorkspace.shared",
-          "when": "view == taskAccordion.libraries && taskAccordion.sharedLibrary",
-          "group": "navigation@1"
         },
         {
           "command": "taskAccordion.openFile",
@@ -182,14 +151,6 @@
       "commandPalette": [
         {
           "command": "taskAccordion.removeSharedFile",
-          "when": "false"
-        },
-        {
-          "command": "taskAccordion.loadFile.shared",
-          "when": "false"
-        },
-        {
-          "command": "taskAccordion.useWorkspace.shared",
           "when": "false"
         }
       ],

@@ -4,10 +4,13 @@ Notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- Added multi-file loading with per-file validation and errors; invalid files are skipped without adding them to the library.
+- Automatically open and focus Commands when selecting a shared file or Workspace tasks.
+- Show the task filename beside Commands and indicate selected libraries with a check icon instead of Active text.
 - Split saved sources and runnable tasks into Task Libraries and Commands panels, with a Workspace tasks row to return to the project.
 - Added an inline remove button for saved shared files; removing the active entry returns to workspace tasks without deleting the file.
 - Remembered loaded shared files in an expandable list for one-click switching, with the active file marked.
-- Visually separated source controls from task actions, with blue Load/Home icons in shared-library mode.
+- Kept Load in its normal color and removed the Home toolbar button; use the Workspace tasks row to return to the project.
 - Added a clickable shared-source row showing the filename and three parent folders, with the full path on hover.
 - Added a file-picker button to load a shared `tasks.json`, remember it per workspace, and watch for changes.
 - Added a button to return to workspace tasks; the open-file button now opens the active task file.
