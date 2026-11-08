@@ -2,6 +2,17 @@
 
 Notable changes to this project are documented here.
 
+## [Unreleased]
+
+- Split saved sources and runnable tasks into Task Libraries and Commands panels, with a Workspace tasks row to return to the project.
+- Added an inline remove button for saved shared files; removing the active entry returns to workspace tasks without deleting the file.
+- Remembered loaded shared files in an expandable list for one-click switching, with the active file marked.
+- Visually separated source controls from task actions, with blue Load/Home icons in shared-library mode.
+- Added a clickable shared-source row showing the filename and three parent folders, with the full path on hover.
+- Added a file-picker button to load a shared `tasks.json`, remember it per workspace, and watch for changes.
+- Added a button to return to workspace tasks; the open-file button now opens the active task file.
+- Added shared shell/process task execution with dependency ordering and validation.
+
 ## [0.3.5] - 2026-10-19
 
 - Updated the Tasks Activity Bar icon with a transparent background and theme-aware outline.

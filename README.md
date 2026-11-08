@@ -1,6 +1,6 @@
 # AJxVSCA Tasks
 
-AJxVSCA Tasks is a Visual Studio Code extension that adds a sidebar for browsing and running tasks defined in your workspace's `.vscode/tasks.json`.
+AJxVSCA Tasks is a Visual Studio Code extension that adds a sidebar for browsing and running tasks defined in your workspace's `.vscode/tasks.json` or a shared task file elsewhere on your system.
 
 Run a task with one click, or run every task in a group in sequence:
 
@@ -20,10 +20,53 @@ Run a task with one click, or run every task in a group in sequence:
 - Runs a task from its inline play button.
 - Runs all tasks in a group, in order, from the group's inline play button after confirmation.
 - Opens `.vscode/tasks.json` from the Tasks view title bar, prompting to create it if it does not exist.
-- Refreshes the task list when `.vscode/tasks.json` is created, changed, or deleted, or when you select the refresh button.
+- Loads a shared `tasks.json` from anywhere on the system, with a button to return to workspace tasks.
+- Refreshes the task list when the active task file is created, changed, or deleted, or when you select the refresh button.
 - Includes a collapsed **How to use** view with a brief `tasks.json` reference.
 
-Only tasks scoped to a workspace are shown; user-level tasks are excluded.
+By default, only tasks scoped to a workspace are shown; user-level tasks are excluded.
+
+## Shared command libraries
+
+The sidebar has separate **Task Libraries** and **Commands** panels. Select **Load Shared tasks.json**
+(folder icon) in the Task Libraries title bar and choose a task file.
+The shared file replaces the workspace task list; it is not copied into your project or modified.
+Each successfully loaded file is saved once per workspace in **Task Libraries**.
+Click a file to show its tasks in **Commands** without reopening the file picker. Entries show the filename
+and up to three parent folders, with the full path on hover. The active file has a blue check icon and an
+**Active** marker; native tree labels use VS Code's normal text color. Saved files stay available after
+returning to workspace tasks and after reopening VS Code. Missing or invalid selections report an error
+and leave the current task source unchanged. **Open tasks.json** opens the active file for editing.
+Use a saved file's **x** button to remove it from the library list without deleting the file on disk.
+Removing the active file returns to workspace tasks. You can add a removed file again with the file picker.
+**Task Libraries** has **Load Shared tasks.json** / **Use Workspace Tasks** buttons.
+**Commands** has **Open tasks.json** / **Refresh Tasks** / **Sort Tasks** buttons and indicates whether
+the active source is a shared library or workspace tasks.
+Load and Home icons turn blue while a shared library is active and return to normal in workspace mode.
+Select the **Workspace tasks** row at the top of **Task Libraries** to switch back to the project,
+or use the **Use Workspace Tasks** (home icon) shortcut.
+**Open tasks.json** opens the active file, and **Refresh Tasks** reloads it.
+Changes, deletion, and recreation of the shared file also refresh the list automatically.
+A missing or invalid shared file shows an error instead of silently falling back to workspace tasks.
+
+Shared files use version `2.0.0` and support JSON comments and trailing commas, `shell` and `process` tasks,
+arguments (including shell quoting), platform overrides, global defaults, working-directory/environment options,
+named problem matchers (a string or array of strings), presentation options, build/test groups,
+and `dependsOn` labels within the same file.
+Dependencies follow `dependsOrder` (`parallel` by default or `sequence`); missing or circular dependencies are rejected.
+Compound tasks with dependencies and no command are also supported.
+Dependencies shared by multiple branches run once per task invocation. Group runs remain sequential, and each
+group task runs its own dependencies, so a dependency can run again for another group task.
+
+Commands run in the first workspace folder by default, not beside the shared file. With no workspace open,
+they run beside the shared file. Set `options.cwd` explicitly when needed.
+VS Code resolves execution variables such as `${workspaceFolder}` and `${env:NAME}` in the task's execution context.
+Workspace folder variables require an open workspace.
+Shared files do not support extension-provided task types (such as `npm` or `dotnet`), `inputs`/`${input:...}`,
+dependency objects, or automatic `runOn` execution. `group.isDefault` does not change VS Code's default
+build/test shortcuts. Use equivalent shell/process commands instead of extension-provided task types.
+Background tasks used as dependencies are awaited until they finish; readiness-based background dependencies
+are not supported. Only load and run shared commands from files you trust.
 
 ## Getting started
 
@@ -73,7 +116,7 @@ How it works:
 - The picker shows the current option in its placeholder text. The list updates as soon as you choose.
 - Your choice is remembered for each workspace, so it is restored the next time you open it.
 - Group play buttons run tasks in the order currently shown, so the sort option also controls the run order.
-- File order is the order in which VS Code returns the workspace tasks, which normally matches their order in `.vscode/tasks.json`.
+- For workspace tasks, file order is the order in which VS Code returns tasks, which normally matches their order in `.vscode/tasks.json`. For a shared library, it is the exact order of the file's `tasks` array.
 
 **Tip:** When sorting by name, numbers are sorted numerically, so `2` comes before `10`. Zero-padding is optional; use it only if you prefer labels such as `02. Build` and `10. Deploy` to have consistent-width numbering.
 

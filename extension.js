@@ -1,10 +1,13 @@
 const vscode = require('vscode');
+const { readSharedTasks, runSharedTask } = require('./shared-tasks');
 
 class TaskProvider {
   constructor(sortBy = 'name') {
     this._emitter = new vscode.EventEmitter();
     this.onDidChangeTreeData = this._emitter.event;
     this.sortBy = sortBy;
+    this.sourceUri = undefined;
+    this.sharedSources = [];
   }
 
   refresh() {
@@ -25,9 +28,24 @@ class TaskProvider {
     if (el) return [];
     // Tasks from .vscode/tasks.json have source "Workspace" and a WorkspaceFolder scope;
     // user-level tasks use the Global scope (a number), so they are excluded.
-    const tasks = (await vscode.tasks.fetchTasks()).filter(
-      t => t.source === 'Workspace' && t.scope && typeof t.scope === 'object'
-    );
+    let tasks;
+    let dependencies;
+    const sourceUri = this.sourceUri;
+    if (sourceUri) {
+      try {
+        const library = await readSharedTasks(vscode, sourceUri);
+        tasks = library.tasks;
+        dependencies = library.dependencies;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Could not load shared tasks from ${sourceUri.fsPath}: ${message}`);
+        return [];
+      }
+    } else {
+      tasks = (await vscode.tasks.fetchTasks()).filter(
+        t => t.source === 'Workspace' && t.scope && typeof t.scope === 'object'
+      );
+    }
     if (this.sortBy === 'name') tasks.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 
     // A label like "Build: Api" is shown as "Api" under a "Build" heading
@@ -37,7 +55,7 @@ class TaskProvider {
     for (const task of tasks) {
       const m = /^([^:]+):\s*(.+)$/.exec(task.name);
       if (!m) {
-        const item = this._taskItem(task, task.name);
+        const item = this._taskItem(task, task.name, dependencies);
         loose.push(item);
         ordered.push(item);
         continue;
@@ -52,13 +70,13 @@ class TaskProvider {
         groups.set(heading, g);
         ordered.push(g);
       }
-      groups.get(heading).children.push(this._taskItem(task, m[2].trim()));
+      groups.get(heading).children.push(this._taskItem(task, m[2].trim(), dependencies));
     }
     if (this.sortBy === 'file') return ordered;
     return [...[...groups.values()].sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true })), ...loose];
   }
 
-  _taskItem(task, label) {
+  _taskItem(task, label, dependencies) {
     const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
     item.contextValue = 'task';
     item.iconPath = new vscode.ThemeIcon('terminal');
@@ -68,6 +86,7 @@ class TaskProvider {
       : task.detail || task.name;
     item.description = command || task.detail;
     item.task = task;
+    item.dependencies = dependencies;
     return item;
   }
 
@@ -81,6 +100,45 @@ class TaskProvider {
     const displayArg = arg => typeof arg === 'string' ? arg : arg.value;
     const args = (execution.args || []).map(displayArg);
     return [displayArg(command), ...args].join(' ');
+  }
+}
+
+class LibraryProvider {
+  constructor(tasks) {
+    this.tasks = tasks;
+    this.onDidChangeTreeData = tasks.onDidChangeTreeData;
+  }
+
+  getTreeItem(item) {
+    return item;
+  }
+
+  getChildren(item) {
+    if (item) return [];
+    const workspace = new vscode.TreeItem('Workspace tasks', vscode.TreeItemCollapsibleState.None);
+    workspace.id = 'workspaceTasks';
+    workspace.contextValue = 'workspaceSource';
+    workspace.description = this.tasks.sourceUri ? undefined : 'Active';
+    workspace.iconPath = new vscode.ThemeIcon(this.tasks.sourceUri ? 'home' : 'check');
+    workspace.tooltip = 'Switch to this project\'s .vscode/tasks.json';
+    workspace.command = { command: 'taskAccordion.useWorkspace', title: 'Use Workspace Tasks' };
+    return [workspace, ...this.tasks.sharedSources.map(uri => this._sourceItem(uri))];
+  }
+
+  _sourceItem(uri) {
+    const active = uri.toString() === this.tasks.sourceUri?.toString();
+    const parts = uri.fsPath.replace(/\\/g, '/').split('/').filter(Boolean);
+    const item = new vscode.TreeItem(parts.pop(), vscode.TreeItemCollapsibleState.None);
+    item.contextValue = 'sharedSource';
+    item.sourceUri = uri;
+    item.id = `sharedSource:${uri.toString()}`;
+    item.description = `${parts.length > 3 ? '.../' : ''}${parts.slice(-3).join('/')}`;
+    if (active) item.description = ['Active', item.description].filter(Boolean).join(' - ');
+    item.iconPath = new vscode.ThemeIcon(active ? 'check' : 'file-code',
+      active ? new vscode.ThemeColor('taskAccordion.sharedForeground') : undefined);
+    item.tooltip = `Shared command library${active ? ' (active)' : ''}\n${uri.fsPath}\nClick to load this file`;
+    item.command = { command: 'taskAccordion.selectSharedFile', title: 'Load Shared tasks.json', arguments: [uri] };
+    return item;
   }
 }
 
@@ -129,8 +187,12 @@ const CHEATSHEET = [
       ['Green play button', 'Runs the task'],
       ['Group play button', 'Runs each task in the group in order'],
       ['Sort Tasks button', 'Choose name or file order'],
-      ['Refresh button', 'Reloads tasks.json'],
-      ['Scope', 'Only this project\'s tasks.json']
+      ['Load Shared tasks.json button', 'Switch to a task file anywhere on the system'],
+      ['Use Workspace Tasks button', 'Return to this project\'s tasks'],
+      ['Task Libraries panel', 'Select a saved file or Workspace tasks'],
+      ['Commands panel', 'Run tasks from the selected source'],
+      ['Refresh button', 'Reloads the active tasks.json'],
+      ['Scope', 'Workspace tasks or the selected shared file']
     ]
   }
 ];
@@ -191,17 +253,108 @@ class HelpProvider {
 function activate(context) {
   const sortBy = context.workspaceState.get('sortBy', 'name');
   const provider = new TaskProvider(sortBy);
+  const savedSource = context.workspaceState.get('sharedTasksUri');
+  const savedSources = [...new Set([
+    ...context.workspaceState.get('sharedTasksHistory', []),
+    ...(savedSource ? [savedSource] : [])
+  ])];
+  provider.sharedSources = savedSources.map(value => vscode.Uri.parse(value));
   const view = vscode.window.createTreeView('taskAccordion.tasks', { treeDataProvider: provider });
+  const libraryView = vscode.window.createTreeView('taskAccordion.libraries', { treeDataProvider: new LibraryProvider(provider) });
   const helpView = vscode.window.createTreeView('taskAccordion.help', { treeDataProvider: new HelpProvider() });
   const watcher = vscode.workspace.createFileSystemWatcher('**/.vscode/tasks.json');
   watcher.onDidChange(() => provider.refresh());
   watcher.onDidCreate(() => provider.refresh());
   watcher.onDidDelete(() => provider.refresh());
+  let sharedWatcher;
+  const sourceSubscription = { dispose: () => sharedWatcher?.dispose() };
+  const setSource = async uri => {
+    sharedWatcher?.dispose();
+    sharedWatcher = undefined;
+    provider.sourceUri = uri;
+    view.description = uri ? 'Shared library' : 'Workspace tasks';
+    if (uri) {
+      sharedWatcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(vscode.Uri.joinPath(uri, '..'), uri.path.split('/').pop())
+      );
+      sharedWatcher.onDidChange(() => provider.refresh());
+      sharedWatcher.onDidCreate(() => provider.refresh());
+      sharedWatcher.onDidDelete(() => provider.refresh());
+    }
+    await vscode.commands.executeCommand('setContext', 'taskAccordion.sharedLibrary', Boolean(uri));
+    provider.refresh();
+  };
+  const restoreSource = async () => {
+    await setSource(savedSource ? vscode.Uri.parse(savedSource) : undefined);
+    if (savedSources.length) await context.workspaceState.update('sharedTasksHistory', savedSources);
+  };
+  restoreSource().catch(error => {
+    vscode.window.showErrorMessage(`Could not restore task source: ${error.message}`);
+  });
+  const selectSharedFile = async uri => {
+    try {
+      await readSharedTasks(vscode, uri);
+      const history = [...new Set([...provider.sharedSources.map(source => source.toString()), uri.toString()])];
+      await context.workspaceState.update('sharedTasksHistory', history);
+      await context.workspaceState.update('sharedTasksUri', uri.toString());
+      provider.sharedSources = history.map(value => vscode.Uri.parse(value));
+      await setSource(uri);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`Could not load shared tasks: ${message}`);
+    }
+  };
 
   context.subscriptions.push(
     view,
+    libraryView,
     helpView,
     watcher,
+    sourceSubscription,
+    vscode.commands.registerCommand('taskAccordion.selectSharedFile', selectSharedFile),
+    vscode.commands.registerCommand('taskAccordion.removeSharedFile', async item => {
+      try {
+        if (!item?.sourceUri || item.contextValue !== 'sharedSource') {
+          throw new Error('Select a saved shared task file to remove.');
+        }
+        const uri = item.sourceUri;
+        const history = provider.sharedSources.filter(source => source.toString() !== uri.toString());
+        const active = provider.sourceUri?.toString() === uri.toString();
+        await context.workspaceState.update('sharedTasksHistory', history.map(source => source.toString()));
+        if (active) await context.workspaceState.update('sharedTasksUri', undefined);
+        provider.sharedSources = history;
+        if (active) await setSource(undefined);
+        else provider.refresh();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Could not remove shared task file from the library: ${message}`);
+      }
+    }),
+    vscode.commands.registerCommand('taskAccordion.loadFile.shared', () =>
+      vscode.commands.executeCommand('taskAccordion.loadFile')),
+    vscode.commands.registerCommand('taskAccordion.useWorkspace.shared', () =>
+      vscode.commands.executeCommand('taskAccordion.useWorkspace')),
+    vscode.commands.registerCommand('taskAccordion.loadFile', async () => {
+      const selected = await vscode.window.showOpenDialog({
+        title: 'Load Shared tasks.json',
+        openLabel: 'Load Tasks',
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        filters: { 'Task files': ['json'] }
+      });
+      if (!selected?.length) return;
+      await selectSharedFile(selected[0]);
+    }),
+    vscode.commands.registerCommand('taskAccordion.useWorkspace', async () => {
+      try {
+        await context.workspaceState.update('sharedTasksUri', undefined);
+        await setSource(undefined);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Could not switch to workspace tasks: ${message}`);
+      }
+    }),
     vscode.commands.registerCommand('taskAccordion.sort', async () => {
       const selected = await vscode.window.showQuickPick(
         [
@@ -216,6 +369,15 @@ function activate(context) {
     }),
     vscode.commands.registerCommand('taskAccordion.refresh', () => provider.refresh()),
     vscode.commands.registerCommand('taskAccordion.openFile', async () => {
+      if (provider.sourceUri) {
+        try {
+          await vscode.window.showTextDocument(provider.sourceUri);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          vscode.window.showErrorMessage(`Could not open shared tasks.json: ${message}`);
+        }
+        return;
+      }
       const folders = vscode.workspace.workspaceFolders;
       if (!folders || !folders.length) return;
       const configDirectory = vscode.Uri.joinPath(folders[0].uri, '.vscode');
@@ -260,21 +422,31 @@ function activate(context) {
     vscode.commands.registerCommand('taskAccordion.run', async arg => {
       // Inline button passes the tree item, which carries the task
       const task = arg && arg.task;
-      if (task) await vscode.tasks.executeTask(task);
+      if (!task) return;
+      try {
+        if (arg.dependencies) await runSharedTask(task, arg.dependencies, runTaskAndWait);
+        else await vscode.tasks.executeTask(task);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Could not run task "${task.name}": ${message}`);
+      }
     }),
     vscode.commands.registerCommand('taskAccordion.runGroup', async group => {
-      const tasks = group && group.children
-        ? group.children.map(child => child.task).filter(Boolean)
+      const items = group && group.children
+        ? group.children.filter(child => child.task)
         : [];
       const confirmation = await vscode.window.showWarningMessage(
-        `Run all ${tasks.length} tasks in "${group.label}" in order?`,
+        `Run all ${items.length} tasks in "${group.label}" in order?`,
         { modal: true },
         'Yes'
       );
       if (confirmation !== 'Yes') return;
 
       try {
-        for (const task of tasks) await runTaskAndWait(task);
+        for (const item of items) {
+          if (item.dependencies) await runSharedTask(item.task, item.dependencies, runTaskAndWait);
+          else await runTaskAndWait(item.task);
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         vscode.window.showErrorMessage(`Could not run group "${group.label}": ${message}`);
