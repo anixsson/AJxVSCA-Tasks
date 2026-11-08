@@ -20,7 +20,7 @@ Run a task with one click, or run every task in a group in sequence:
 - Runs a task from its inline play button.
 - Runs all tasks in a group, in order, from the group's inline play button after confirmation.
 - Opens `.vscode/tasks.json` from the Tasks view title bar, prompting to create it if it does not exist.
-- Loads a shared `tasks.json` from anywhere on the system, with a button to return to workspace tasks.
+- Loads shared `tasks.json` files from anywhere on the system and saves them as **Task Libraries**, so you can switch between task lists with one click or return to workspace tasks.
 - Refreshes the task list when the active task file is created, changed, or deleted, or when you select the refresh button.
 - Includes a collapsed **How to use** view with a brief `tasks.json` reference.
 
@@ -28,7 +28,13 @@ By default, only tasks scoped to a workspace are shown; user-level tasks are exc
 
 ## Shared command libraries
 
-The sidebar has separate **Task Libraries** and **Commands** panels. Select **Load Shared tasks.json**
+The sidebar has separate **Task Libraries** and **Commands** panels. Task Libraries can load task files
+from anywhere on your system and keeps them in a saved list, so you can switch between task lists with a
+single click. The active file is marked with a check icon, and **Commands** shows its tasks:
+
+<p align="center"><img src="media/printscreen/SSH3.png" alt="Task Libraries panel with the Workspace tasks row and saved shared task files, and the Commands panel showing the active file's tasks" width="372"></p>
+
+Select **Load Shared tasks.json**
 (folder icon) in the Task Libraries title bar and choose one or more task files.
 Each file is validated before it is added. Unreadable, malformed, or unsupported task files are skipped
 with an error showing the file path and reason. Valid files are saved together; the first valid file in

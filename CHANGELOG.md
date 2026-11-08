@@ -4,6 +4,9 @@ Notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-11-08
+
+- Documented the Task Libraries panel in the README with a new screenshot, highlighting multi-file loading and one-click switching between task lists.
 - Added multi-file loading with per-file validation and errors; invalid files are skipped without adding them to the library.
 - Automatically open and focus Commands when selecting a shared file or Workspace tasks.
 - Show the task filename beside Commands and indicate selected libraries with a check icon instead of Active text.
