@@ -2,7 +2,7 @@
   "name": "AJxVSCA-Tasks",
   "displayName": "AJxVSCA Tasks",
   "description": "Sidebar view listing and running workspace tasks or a shared tasks.json library",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "ajxsystems",
   "icon": "media/icon.png",
   "repository": {
@@ -38,7 +38,10 @@
     "taskDefinitions": [
       {
         "type": "taskAccordion.shared",
-        "required": ["path", "label"],
+        "required": [
+          "path",
+          "label"
+        ],
         "properties": {
           "path": {
             "type": "string",
