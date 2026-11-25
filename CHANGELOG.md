@@ -4,6 +4,10 @@ Notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-11-08
+
+- Version bump only; no user-facing changes.
+
 ## [0.4.3] - 2026-11-08
 
 - Documented the Task Libraries panel in the README with a new screenshot, highlighting multi-file loading and one-click switching between task lists.
