@@ -1,3 +1,4 @@
+# Publishes this VS Code extension and updates it on the VS Code Marketplace.
 name: Publish Extension
 
 on:
